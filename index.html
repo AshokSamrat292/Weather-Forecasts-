@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Weather App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Removed all movement animations - keeping only static effects */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        }
+        
+        @keyframes slide-in {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes bounce-in {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes swipe-in {
+            from { opacity: 0; transform: translateX(-100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Static weather button styles - no movement */
+        .btn-search {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 300% 300%;
+        }
+        
+        .btn-search::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3e%3cg fill='white' opacity='0.3'%3e%3ccircle cx='3' cy='3' r='1'/%3e%3ccircle cx='13' cy='7' r='1'/%3e%3ccircle cx='7' cy='15' r='1'/%3e%3ccircle cx='17' cy='13' r='1'/%3e%3c/g%3e%3c/svg%3e") repeat;
+            pointer-events: none;
+        }
+        
+        .btn-search::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+            transform: scale(0);
+            transition: transform 0.6s ease;
+        }
+        
+        .btn-search:hover::after {
+            transform: scale(1);
+        }
+        
+        .btn-location {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .btn-location::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(2px 2px at 10px 15px, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 25px 8px, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 35px 20px, rgba(255,255,255,0.5), transparent),
+                radial-gradient(2px 2px at 45px 12px, rgba(255,255,255,0.6), transparent);
+            background-size: 50px 25px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .btn-location:hover::before {
+            opacity: 1;
+        }
+        
+        .btn-location::after {
+            content: '🌍';
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-location:hover::after {
+            opacity: 0.7;
+            left: 15%;
+        }
+        
+        /* Removed all floating/moving animations */
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        .slide-in { animation: slide-in 0.6s ease-out; }
+        .bounce-in { animation: bounce-in 0.8s ease-out; }
+        .swipe-in { animation: swipe-in 0.5s ease-out; }
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        .loading { animation: rotate 2s linear infinite; }
+        
+        .gradient-bg {
+            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
+            background-size: 400% 400%;
+            animation: gradient-shift 8s ease infinite;
+        }
+        
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .glass-card {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .weather-icon-large {
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.3));
+            transition: filter 0.3s ease;
+        }
+        
+        .weather-icon-large:hover {
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.4));
+        }
+        
+        /* Mobile-specific styles - removed movement */
+        @media (max-width: 768px) {
+            .mobile-tap {
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+            }
+            
+            .weather-card-mobile {
+                margin: 0.5rem;
+            }
+            
+            .forecast-mobile {
+                grid-template-columns: 1fr 1fr;
+                gap: 0.75rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .forecast-mobile {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+        }
+        
+        /* Smooth scrolling for mobile */
+        * {
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Better touch targets */
+        .touch-target {
+            min-height: 48px;
+            min-width: 48px;
+        }
+        
+        /* Subtle hover effects without movement */
+        .btn-hover:hover {
+            filter: brightness(1.1);
+            transition: filter 0.2s ease;
+        }
+        
+        .card-hover:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transition: background 0.3s ease;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Static background elements - no floating animation -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-10 left-10 w-20 h-20 bg-white bg-opacity-10 rounded-full"></div>
+        <div class="absolute top-32 right-20 w-16 h-16 bg-white bg-opacity-10 rounded-full"></div>
+        <div class="absolute bottom-20 left-32 w-12 h-12 bg-white bg-opacity-10 rounded-full"></div>
+        <div class="absolute bottom-40 right-10 w-24 h-24 bg-white bg-opacity-10 rounded-full"></div>
+    </div>
+
+    <div class="glass-card shadow-2xl rounded-3xl p-4 sm:p-6 lg:p-8 max-w-md w-full text-center relative overflow-hidden pulse-glow weather-card-mobile">
+        <!-- Shimmer overlay for loading -->
+        <div id="shimmer-overlay" class="absolute inset-0 shimmer opacity-0 transition-opacity duration-500"></div>
+        
+        <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 sm:mb-6">🌤️ Weather Forecast</h1>
+
+        <!-- Search Section -->
+        <div class="flex flex-col sm:flex-row gap-3 mb-4 sm:mb-6 slide-in">
+            <input id="city" type="text" placeholder="Enter city name" 
+                class="mobile-tap touch-target flex-grow border-0 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl px-4 py-4 sm:py-3 text-base sm:text-sm text-white placeholder-white placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 transition-all duration-300">
+            <button id="searchBtn" class="btn-search mobile-tap mobile-button touch-target btn-hover text-white px-6 py-4 sm:py-3 rounded-xl font-semibold transition-all duration-200 shadow-lg text-lg sm:text-base">
+                🔍 Search
+            </button>
+        </div>
+
+        <button id="locationBtn" class="btn-location mobile-tap mobile-button touch-target btn-hover text-white px-6 py-4 sm:py-3 rounded-xl mb-4 sm:mb-6 font-semibold transition-all duration-200 shadow-lg text-lg sm:text-base w-full sm:w-auto">
+            📍 Current Location
+        </button>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden mb-4">
+            <div class="loading w-10 h-10 sm:w-8 sm:h-8 border-4 border-white border-t-transparent rounded-full mx-auto"></div>
+            <p class="text-white mt-2 text-base sm:text-sm">Fetching weather data...</p>
+        </div>
+
+        <!-- Weather Result -->
+        <div id="weather-result" class="space-y-4"></div>
+
+        <!-- Forecast Toggle -->
+        <div class="flex justify-center mb-4 mt-6">
+            <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-xl p-1 flex">
+                <button id="hourlyBtn" class="px-4 py-2 rounded-lg text-white font-semibold transition-all duration-200 bg-white bg-opacity-20">
+                    📅 Hourly
+                </button>
+                <button id="dailyBtn" class="px-4 py-2 rounded-lg text-white font-semibold transition-all duration-200">
+                    📆 5-Day
+                </button>
+            </div>
+        </div>
+
+        <!-- Hourly Forecast -->
+        <div id="hourly-forecast" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 overflow-x-auto"></div>
+
+        <!-- Daily Forecast -->
+        <div id="daily-forecast" class="forecast-mobile grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4 hidden"></div>
+    </div>
+
+    <script>
+        const apiKey = "7854d0c2ad2215df75103315c1af544c";
+
+        // Show loading animation
+        function showLoading() {
+            document.getElementById("loading").classList.remove("hidden");
+            document.getElementById("shimmer-overlay").classList.add("opacity-30");
+            document.getElementById("weather-result").innerHTML = "";
+            document.getElementById("hourly-forecast").innerHTML = "";
+            document.getElementById("daily-forecast").innerHTML = "";
+        }
+
+        // Hide loading animation
+        function hideLoading() {
+            document.getElementById("loading").classList.add("hidden");
+            document.getElementById("shimmer-overlay").classList.remove("opacity-30");
+        }
+
+        // Get weather by city
+        async function getWeather() {
+            const city = document.getElementById("city").value;
+            if (!city) {
+                showAlert("Please enter a city name!", "error");
+                return;
+            }
+            showLoading();
+            fetchWeatherData(`q=${city}`);
+        }
+
+        // Get weather by location
+        function getLocationWeather() {
+            if (navigator.geolocation) {
+                showLoading();
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const { latitude, longitude } = pos.coords;
+                    fetchWeatherData(`lat=${latitude}&lon=${longitude}`);
+                }, () => {
+                    hideLoading();
+                    showAlert("Location access denied.", "error");
+                });
+            } else {
+                showAlert("Geolocation not supported.", "error");
+            }
+        }
+
+        // Show animated alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+            alertDiv.className = `fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-lg z-50 slide-in`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.style.opacity = '0';
+                alertDiv.style.transform = 'translateX(100%)';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 3000);
+        }
+
+        // Fetch weather + forecast with basic error handling
+        async function fetchWeatherData(query) {
+            try {
+                const weatherURL = `https://api.openweathermap.org/data/2.5/weather?${query}&appid=${apiKey}&units=metric`;
+                const forecastURL = `https://api.openweathermap.org/data/2.5/forecast?${query}&appid=${apiKey}&units=metric`;
+
+                const [weatherRes, forecastRes] = await Promise.all([
+                    fetch(weatherURL),
+                    fetch(forecastURL)
+                ]);
+
+                // Basic error handling for API responses
+                if (!weatherRes.ok) {
+                    throw new Error(`Weather API error: ${weatherRes.status}`);
+                }
+                if (!forecastRes.ok) {
+                    throw new Error(`Forecast API error: ${forecastRes.status}`);
+                }
+
+                const weatherData = await weatherRes.json();
+                const forecastData = await forecastRes.json();
+
+                hideLoading();
+
+                if (weatherData.cod !== 200) {
+                    document.getElementById("weather-result").innerHTML =
+                        `<p class="text-red-300 bounce-in">⚠️ ${weatherData.message}</p>`;
+                    return;
+                }
+
+                displayWeather(weatherData);
+                displayHourlyForecast(forecastData.list);
+                displayDailyForecast(forecastData.list);
+                
+            } catch (err) {
+                hideLoading();
+                console.error('Error fetching weather data:', err);
+                document.getElementById("weather-result").innerHTML =
+                    `<p class="text-red-300 bounce-in">❌ Error fetching data. Please try again.</p>`;
+                showAlert("Failed to fetch weather data. Please check your connection and try again.", "error");
+            }
+        }
+
+        // Display current weather with animations
+        function displayWeather(data) {
+            const weatherHtml = `
+                <div class="bounce-in">
+                    <h2 class="text-xl sm:text-2xl font-bold text-white mb-2">${data.name}, ${data.sys.country}</h2>
+                    <img class="mx-auto weather-icon-large mb-4 w-24 h-24 sm:w-32 sm:h-32" src="https://openweathermap.org/img/wn/${data.weather[0].icon}@4x.png" alt="Weather Icon">
+                    <div class="bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl p-4 sm:p-6 mb-4">
+                        <p class="text-4xl sm:text-3xl font-bold text-white mb-2">🌡️ ${Math.round(data.main.temp)}°C</p>
+                        <p class="text-lg sm:text-xl text-white capitalize mb-4">${data.weather[0].description}</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                            <div class="mobile-tap card-hover bg-white bg-opacity-10 rounded-lg p-4 sm:p-3 transition-all duration-300">
+                                <p class="text-white text-base sm:text-sm">💧 Humidity</p>
+                                <p class="font-bold text-white text-lg sm:text-base">${data.main.humidity}%</p>
+                            </div>
+                            <div class="mobile-tap card-hover bg-white bg-opacity-10 rounded-lg p-4 sm:p-3 transition-all duration-300">
+                                <p class="text-white text-base sm:text-sm">🌬️ Wind</p>
+                                <p class="font-bold text-white text-lg sm:text-base">${data.wind.speed} m/s</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById("weather-result").innerHTML = weatherHtml;
+        }
+
+        // Display hourly forecast (next 24 hours)
+        function displayHourlyForecast(list) {
+            document.getElementById("hourly-forecast").innerHTML = "";
+            const next24Hours = list.slice(0, 8); // Next 24 hours (8 x 3-hour intervals)
+            
+            next24Hours.forEach((hour, index) => {
+                const time = new Date(hour.dt * 1000).toLocaleTimeString("en-US", { 
+                    hour: "numeric", 
+                    hour12: true 
+                });
+                const hourCard = document.createElement('div');
+                hourCard.className = "mobile-tap touch-target card-hover bg-white bg-opacity-20 backdrop-blur-sm p-3 rounded-xl shadow-lg transition-all duration-300 cursor-pointer slide-in min-w-0";
+                hourCard.style.animationDelay = `${index * 0.05}s`;
+                
+                hourCard.innerHTML = `
+                    <h4 class="font-bold text-white text-xs mb-1">${time}</h4>
+                    <img class="mx-auto mb-1 w-8 h-8 sm:w-10 sm:h-10" src="https://openweathermap.org/img/wn/${hour.weather[0].icon}@2x.png" alt="Weather">
+                    <p class="text-white font-bold text-sm">${Math.round(hour.main.temp)}°C</p>
+                    <p class="text-xs text-white opacity-70">${Math.round(hour.pop * 100)}%</p>
+                    <p class="text-xs text-white opacity-60 mt-1">${hour.wind.speed.toFixed(1)} m/s</p>
+                `;
+                
+                document.getElementById("hourly-forecast").appendChild(hourCard);
+            });
+        }
+
+        // Display 5-day forecast
+        function displayDailyForecast(list) {
+            document.getElementById("daily-forecast").innerHTML = "";
+            const dailyData = list.filter(item => item.dt_txt.includes("12:00:00"));
+            
+            dailyData.forEach((day, index) => {
+                const date = new Date(day.dt_txt).toLocaleDateString("en-US", { 
+                    weekday: "short", 
+                    month: "short", 
+                    day: "numeric" 
+                });
+                const forecastCard = document.createElement('div');
+                forecastCard.className = "mobile-tap touch-target card-hover bg-white bg-opacity-20 backdrop-blur-sm p-4 sm:p-3 rounded-xl shadow-lg transition-all duration-300 cursor-pointer slide-in";
+                forecastCard.style.animationDelay = `${index * 0.1}s`;
+                
+                forecastCard.innerHTML = `
+                    <h3 class="font-bold text-white text-sm mb-2">${date}</h3>
+                    <img class="mx-auto mb-2 transition-transform duration-300 w-12 h-12 sm:w-16 sm:h-16" src="https://openweathermap.org/img/wn/${day.weather[0].icon}@2x.png" alt="Weather">
+                    <p class="text-white font-bold text-lg sm:text-base">${Math.round(day.main.temp)}°C</p>
+                    <p class="text-xs text-white opacity-80 capitalize mb-1">${day.weather[0].description}</p>
+                    <div class="flex justify-between text-xs text-white opacity-70">
+                        <span>💧 ${day.main.humidity}%</span>
+                        <span>🌬️ ${day.wind.speed.toFixed(1)}</span>
+                    </div>
+                `;
+                
+                document.getElementById("daily-forecast").appendChild(forecastCard);
+            });
+        }
+
+        // Toggle between hourly and daily forecast
+        function showHourlyForecast() {
+            document.getElementById("hourly-forecast").classList.remove("hidden");
+            document.getElementById("daily-forecast").classList.add("hidden");
+            document.getElementById("hourlyBtn").classList.add("bg-white", "bg-opacity-20");
+            document.getElementById("dailyBtn").classList.remove("bg-white", "bg-opacity-20");
+        }
+
+        function showDailyForecast() {
+            document.getElementById("hourly-forecast").classList.add("hidden");
+            document.getElementById("daily-forecast").classList.remove("hidden");
+            document.getElementById("dailyBtn").classList.add("bg-white", "bg-opacity-20");
+            document.getElementById("hourlyBtn").classList.remove("bg-white", "bg-opacity-20");
+        }
+
+        // Add enter key support - removed scaling animation
+        document.getElementById("city").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                getWeather();
+            }
+        });
+
+        // Button click handlers - removed scaling animations
+        document.getElementById("searchBtn").addEventListener("click", getWeather);
+        document.getElementById("locationBtn").addEventListener("click", getLocationWeather);
+        
+        // Forecast toggle handlers
+        document.getElementById("hourlyBtn").addEventListener("click", showHourlyForecast);
+        document.getElementById("dailyBtn").addEventListener("click", showDailyForecast);
+    </script>
+
+</body>
+</html>
